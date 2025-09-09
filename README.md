@@ -1,5 +1,5 @@
 # 🌈 rainbow
-A lightweight annotation tool for labeling text spans.
+Rainbow is a lightweight annotation tool for text spans, great for small workloads and development.
 Made with Google Gemini.
 
 ![](https://github.com/jmilbauer/rainbow/blob/main/example.gif)
