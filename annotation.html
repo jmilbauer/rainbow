@@ -204,14 +204,66 @@
                 annotationZone.innerHTML = `<p class="text-gray-800 leading-relaxed">${text}</p>`;
             };
 
-            // Function to generate a random hex color
-            const getRandomColor = () => {
-                const letters = '0123456789ABCDEF';
-                let color = '#';
-                for (let i = 0; i < 6; i++) {
-                    color += letters[Math.floor(Math.random() * 16)];
+            // New color generation algorithm
+            const getDistinctColor = () => {
+                const existingColors = Array.from(labelOverview.querySelectorAll('button'))
+                    .map(btn => btn.getAttribute('data-color'));
+
+                // Helper function to calculate color distance in RGB space
+                const colorDistance = (color1, color2) => {
+                    const c1 = hexToRgb(color1);
+                    const c2 = hexToRgb(color2);
+                    if (!c1 || !c2) return Infinity;
+                    const r = c1.r - c2.r;
+                    const g = c1.g - c2.g;
+                    const b = c1.b - c2.b;
+                    return Math.sqrt(r * r + g * g + b * b);
+                };
+
+                const hexToRgb = (hex) => {
+                    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                    return result ? {
+                        r: parseInt(result[1], 16),
+                        g: parseInt(result[2], 16),
+                        b: parseInt(result[3], 16)
+                    } : null;
+                };
+
+                // Function to check if a color is bold and not pastel-like
+                const isBoldColor = (r, g, b) => {
+                    const min = Math.min(r, g, b);
+                    const max = Math.max(r, g, b);
+                    // Ensure a significant difference between the brightest and darkest component
+                    return (max - min) > 100; 
+                };
+
+                let newColor = '';
+                let isDistinct = false;
+                let attempts = 0;
+
+                while (!isDistinct && attempts < 100) {
+                    attempts++;
+                    // Generate a new random color in RGB
+                    const r = Math.floor(Math.random() * 256);
+                    const g = Math.floor(Math.random() * 256);
+                    const b = Math.floor(Math.random() * 256);
+                    
+                    if (!isBoldColor(r, g, b)) {
+                        continue; // Skip if not bold
+                    }
+
+                    // Convert RGB to hex
+                    newColor = `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).padStart(6, '0')}`;
+                    isDistinct = true;
+                    for (const existingColor of existingColors) {
+                        if (colorDistance(newColor, existingColor) < 150) { // Threshold for "sameness"
+                            isDistinct = false;
+                            break;
+                        }
+                    }
                 }
-                return color;
+                
+                return isDistinct ? newColor : '#60A5FA'; // Fallback color if loop fails
             };
 
             // Function to update the background of a span with a gradient of its labels
@@ -360,7 +412,7 @@
                     newLabelBtn.setAttribute('data-label-name', labelName); // Store label name for lookup
                     
                     // Apply styles for a colorful, rounded button
-                    const color = getRandomColor();
+                    const color = getDistinctColor(); // Use the new function
                     newLabelBtn.style.backgroundColor = color;
                     newLabelBtn.setAttribute('data-color', color); // Store color for annotated spans
                     newLabelBtn.classList.add(
@@ -448,6 +500,11 @@
                             focusedSpan = spanId;
                             annotationZone.querySelectorAll('.annotated-text').forEach(s => s.classList.remove('focused-span'));
                             newSpan.classList.add('focused-span');
+                            
+                            // Highlight the label button that was just used
+                            focusedLabels.push(clickedLabelName);
+                            event.target.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+
                         } else {
                             // No text selected and no span focused, so just toggle the label focus
                             const index = focusedLabels.indexOf(clickedLabelName);
@@ -585,6 +642,7 @@
                         if (labels.length === 0 && spanElement) {
                             // Remove span from DOM if it has no labels left
                             spanElement.parentNode.replaceChild(document.createTextNode(spanElement.textContent), spanElement);
+                            delete textToLabel[spanId]; // Remove from textToLabel data structure
                         } else if (spanElement) {
                             updateSpanBackground(spanElement);
                         }
@@ -592,7 +650,6 @@
 
                     // Remove the label from data structures
                     delete labelToText[labelName];
-                    delete textToLabel; // Reset all text annotations for now, this will be fixed in the next iteration.
 
                     // Remove the label button from the DOM
                     const labelButton = labelOverview.querySelector(`button[data-label-name="${labelName}"]`);
