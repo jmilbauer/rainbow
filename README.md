@@ -1,5 +1,5 @@
 # rainbow
-A lightweight annotation tool to label text segments with consistent label sets.
+A lightweight annotation tool for labeling text spans.
 Made with Google Gemini.
 
 ![](https://github.com/jmilbauer/rainbow/blob/main/example.gif)
@@ -10,9 +10,8 @@ Made with Google Gemini.
 
 ## Installation and Usage
 
-No installation needed. Just open the HTML file, and start annotating.
-You'll have to manage data yourself, though.
-So this is best for small annotation workloads.
+No installation needed. Just open the HTML file and start annotating.
+You will have to manage data yourself, so this is best for small annotation workloads, design iteration, or as a basis for more complex UIs.
 
 ## Goals
 
