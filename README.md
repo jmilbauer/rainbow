@@ -2,7 +2,7 @@
 A lightweight annotation tool to label text segments with consistent label sets.
 Made with Google Gemini.
 
-![](https://github.com/jmilbauer/rainbow/example.gif)
+![](https://github.com/jmilbauer/rainbow/blob/main/example.gif)
 
 ## Updates
 
