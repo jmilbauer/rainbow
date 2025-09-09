@@ -207,8 +207,23 @@
 
             // New color generation algorithm
             const getDistinctColor = () => {
-                const existingColors = Array.from(labelOverview.querySelectorAll('button'))
-                    .map(btn => btn.getAttribute('data-color'));
+                const existingButtons = Array.from(labelOverview.querySelectorAll('button'));
+                const existingColors = existingButtons.map(btn => btn.getAttribute('data-color'));
+                const labelCount = existingButtons.length;
+
+                const predefinedColors = [
+                    '#EF4444', // A nice red (Tailwind red-500)
+                    '#F59E0B', // A nice yellow (Tailwind amber-500)
+                    '#3B82F6', // A nice blue (Tailwind blue-500)
+                ];
+
+                if (labelCount < predefinedColors.length) {
+                    const colorToUse = predefinedColors[labelCount];
+                    // Use the predefined color if it's not already taken
+                    if (!existingColors.includes(colorToUse)) {
+                        return colorToUse;
+                    }
+                }
 
                 // Helper function to calculate color distance in RGB space
                 const colorDistance = (color1, color2) => {
@@ -671,3 +686,4 @@
 
 </body>
 </html>
+
