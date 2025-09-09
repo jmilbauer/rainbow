@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Annotation UI</title>
+    <!-- Use Tailwind CSS for a modern and responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply bg-gray-100;
+        }
+        /* Custom styles for annotated text spans */
+        .annotated-text {
+            border-radius: 0.25rem;
+            padding: 0.125rem 0.25rem;
+            line-height: 1.5;
+            display: inline-block;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            -webkit-box-decoration-break: clone;
+            box-decoration-break: clone;
+            font-weight: 500;
+        }
+        /* Highlight for focused span */
+        .focused-span {
+            outline: 2px solid theme('colors.blue.500');
+            outline-offset: 2px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="flex flex-col lg:flex-row gap-6 h-[calc(100vh-4rem)]">
+
+        <!-- Left Panel: Annotation Zone -->
+        <div class="flex flex-col w-full lg:w-2/3 h-full bg-white rounded-2xl shadow-lg p-6 overflow-hidden">
+            <h1 class="text-2xl font-bold mb-4 text-gray-800">Annotation Zone</h1>
+
+            <!-- Input and Load Section -->
+            <div class="mb-6">
+                <textarea id="text-input" class="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700 h-32" placeholder="Paste your text here to load it for annotation..."></textarea>
+                <div class="flex gap-4 mt-4">
+                    <button id="load-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors shadow-md">
+                        Load Text
+                    </button>
+                    <button id="reset-button" class="bg-gray-400 hover:bg-gray-500 text-white font-medium py-3 rounded-xl transition-colors shadow-md flex-shrink-0 whitespace-nowrap px-4">
+                        Reset
+                    </button>
+                    <button id="export-button" class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-colors shadow-md flex-shrink-0 whitespace-nowrap px-4">
+                        Export</button>
+                </div>
+            </div>
+
+            <!-- Display Text Section -->
+            <div id="annotation-zone" class="bg-gray-50 flex-grow p-6 rounded-xl border border-gray-200 overflow-y-auto text-gray-800 leading-relaxed">
+                <!-- Text will be loaded here -->
+                <p class="text-gray-500 italic">Annotation text will appear here after you click 'Load Text'.</p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Label Overview -->
+        <div class="flex flex-col w-full lg:w-1/3 h-full bg-white rounded-2xl shadow-lg p-6 overflow-hidden">
+            <h1 class="text-2xl font-bold mb-4 text-gray-800">Label Overview</h1>
+            <div id="label-overview" class="flex-grow p-4 bg-gray-50 rounded-xl border border-gray-200 overflow-y-auto text-gray-700">
+                <!-- Labels will be displayed here -->
+                <p class="text-gray-500 italic">Labels will be created and displayed here.</p>
+            </div>
+            
+            <!-- Button Section for Labels -->
+            <div class="flex w-full gap-4 mt-6">
+                <button id="new-label-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-colors shadow-lg flex items-center justify-center space-x-2">
+                    <span>+</span>
+                    <span>New</span>
+                </button>
+                <button id="edit-label-btn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl transition-colors shadow-lg flex items-center justify-center space-x-2">
+                    <span>✏️</span>
+                    <span>Edit</span>
+                </button>
+                <button id="delete-label-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-colors shadow-lg flex items-center justify-center space-x-2">
+                    <span>🗑️</span>
+                    <span>Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals and Popups -->
+    <div id="edit-label-modal" class="modal">
+        <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-sm">
+            <h2 class="text-xl font-bold mb-4">Edit Label</h2>
+            <div class="mb-4">
+                <label for="edit-name" class="block text-gray-700">Name:</label>
+                <input type="text" id="edit-name" class="w-full p-2 border border-gray-300 rounded-lg mt-1">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700">Color (RGB):</label>
+                <div class="flex gap-2 mt-1">
+                    <input type="number" id="edit-color-r" min="0" max="255" placeholder="R" class="w-1/3 p-2 border border-gray-300 rounded-lg">
+                    <input type="number" id="edit-color-g" min="0" max="255" placeholder="G" class="w-1/3 p-2 border border-gray-300 rounded-lg">
+                    <input type="number" id="edit-color-b" min="0" max="255" placeholder="B" class="w-1/3 p-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="cancel-edit-btn" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="save-edit-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-popup" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 transform translate-y-full opacity-0">
+        <!-- Message will be dynamically inserted here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadButton = document.getElementById('load-button');
+            const resetButton = document.getElementById('reset-button');
+            const exportButton = document.getElementById('export-button');
+            const textInput = document.getElementById('text-input');
+            const annotationZone = document.getElementById('annotation-zone');
+            const newLabelBtn = document.getElementById('new-label-btn');
+            const editLabelBtn = document.getElementById('edit-label-btn');
+            const deleteLabelBtn = document.getElementById('delete-label-btn');
+            const labelOverview = document.getElementById('label-overview');
+            const editModal = document.getElementById('edit-label-modal');
+            const editNameInput = document.getElementById('edit-name');
+            const editColorR = document.getElementById('edit-color-r');
+            const editColorG = document.getElementById('edit-color-g');
+            const editColorB = document.getElementById('edit-color-b');
+            const saveEditBtn = document.getElementById('save-edit-btn');
+            const cancelEditBtn = document.getElementById('cancel-edit-btn');
+            const messagePopup = document.getElementById('message-popup');
+            
+            // Data storage and state variables
+            let focusedLabels = []; // Stores names of focused labels
+            let focusedSpan = null; // Stores the ID of the currently selected span
+            let textToLabel = {}; // Maps span ID to an array of label names
+            let labelToText = {}; // Maps label name to an array of span IDs
+
+            // Sample text to load on button click if input is empty
+            const sampleText = `The quick brown fox jumps over the lazy dog. This sentence contains all letters of the English alphabet. It is often used for testing typing skills and fonts. In this text, we can find several entities like "fox," "dog," and "English alphabet," which might be interesting to label.`;
+
+            // Function to show a temporary message popup
+            const showMessage = (message) => {
+                messagePopup.textContent = message;
+                messagePopup.classList.remove('translate-y-full', 'opacity-0');
+                messagePopup.classList.add('translate-y-0', 'opacity-100');
+                setTimeout(() => {
+                    messagePopup.classList.remove('translate-y-0', 'opacity-100');
+                    messagePopup.classList.add('translate-y-full', 'opacity-0');
+                }, 3000);
+            };
+
+            // Function to reset all annotated spans and associated data
+            const resetAnnotations = () => {
+                // Clear the annotation zone
+                annotationZone.innerHTML = '';
+                const p = document.createElement('p');
+                p.classList.add('text-gray-500', 'italic');
+                p.textContent = 'Annotation text will appear here after you click \'Load Text\'.';
+                annotationZone.appendChild(p);
+
+                // Reset data structures
+                textToLabel = {};
+                labelToText = {};
+                focusedSpan = null;
+                focusedLabels = [];
+
+                // Remove highlight from all label buttons
+                labelOverview.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                });
+            };
+
+            // Function to load the text into the annotation zone
+            const loadText = () => {
+                let text = textInput.value;
+                if (text.trim() === '') {
+                    text = sampleText;
+                }
+                
+                // Reset annotations before loading new text
+                resetAnnotations();
+                
+                // Clear the existing content and append the new text
+                annotationZone.innerHTML = `<p class="text-gray-800 leading-relaxed">${text}</p>`;
+            };
+
+            // Function to generate a random hex color
+            const getRandomColor = () => {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            };
+
+            // Function to update the background of a span with a gradient of its labels
+            const updateSpanBackground = (spanElement) => {
+                const labels = textToLabel[spanElement.id] || [];
+                const colors = labels.map(labelName => {
+                    const labelButton = labelOverview.querySelector(`button[data-label-name="${labelName}"]`);
+                    return labelButton ? labelButton.getAttribute('data-color') : '#ffffff';
+                });
+
+                if (colors.length > 1) {
+                    const gradient = `linear-gradient(to right, ${colors.map(c => c + '55').join(', ')})`;
+                    spanElement.style.backgroundImage = gradient;
+                    spanElement.style.backgroundColor = 'transparent'; // Reset solid color
+                } else if (colors.length === 1) {
+                    spanElement.style.backgroundImage = 'none';
+                    spanElement.style.backgroundColor = colors[0] + '55';
+                } else {
+                    spanElement.style.backgroundImage = 'none';
+                    spanElement.style.backgroundColor = 'transparent';
+                }
+            };
+
+            // Handle text selection in the annotation zone
+            let currentSelection = null;
+            annotationZone.addEventListener('mouseup', () => {
+                const selection = window.getSelection();
+                if (selection.toString().length > 0 && annotationZone.contains(selection.anchorNode)) {
+                    currentSelection = selection.getRangeAt(0);
+                } else {
+                    currentSelection = null;
+                }
+            });
+
+            // Handle clicks on the annotation zone to manage span focus
+            annotationZone.addEventListener('click', (event) => {
+                const allSpans = annotationZone.querySelectorAll('.annotated-text');
+                allSpans.forEach(s => s.classList.remove('focused-span'));
+                focusedSpan = null;
+
+                const clickedElement = event.target;
+                if (clickedElement.tagName === 'SPAN' && clickedElement.classList.contains('annotated-text')) {
+                    // Clicked on an annotated span
+                    const spanId = clickedElement.id;
+                    focusedSpan = spanId;
+                    clickedElement.classList.add('focused-span');
+                    
+                    const labels = textToLabel[spanId];
+
+                    // Reset all focused labels
+                    focusedLabels = [];
+                    labelOverview.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                    });
+
+                    // Set focus on corresponding labels
+                    labels.forEach(labelName => {
+                        const labelButton = labelOverview.querySelector(`button[data-label-name="${labelName}"]`);
+                        if (labelButton) {
+                            focusedLabels.push(labelName);
+                            labelButton.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                        }
+                    });
+                } else {
+                    // Clicked elsewhere, so reset all focused labels
+                    focusedLabels = [];
+                    labelOverview.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                    });
+                }
+            });
+
+            // Attach the click event listener to the load button
+            loadButton.addEventListener('click', loadText);
+            
+            // Attach the click event listener to the reset button
+            resetButton.addEventListener('click', resetAnnotations);
+
+            // Attach the click event listener to the export button
+            exportButton.addEventListener('click', () => {
+                const allLabels = Array.from(labelOverview.querySelectorAll('button')).map(btn => btn.getAttribute('data-label-name'));
+                let originalText = textInput.value;
+                if (originalText.trim() === '') {
+                    originalText = sampleText;
+                }
+                const annotations = [];
+                for (const spanId in textToLabel) {
+                    const spanElement = document.getElementById(spanId);
+                    if (spanElement) {
+                        annotations.push({
+                            text: spanElement.textContent,
+                            labels: textToLabel[spanId]
+                        });
+                    }
+                }
+
+                const exportData = {
+                    labels: allLabels,
+                    original: originalText,
+                    annotations: annotations
+                };
+
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'annotations.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showMessage("Annotations exported as annotations.json!");
+            });
+
+            // Optional: Also allow loading on Enter key press in the textarea
+            textInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault(); // Prevent new line
+                    loadText();
+                }
+            });
+
+            // Make the 'New Label' button functional
+            newLabelBtn.addEventListener('click', () => {
+                const labelName = prompt("Enter a name for the new label:");
+                
+                // Check if a label name was entered
+                if (labelName) {
+                    // Check for unique label name
+                    const existingLabels = Array.from(labelOverview.querySelectorAll('button')).map(btn => btn.getAttribute('data-label-name'));
+                    if (existingLabels.includes(labelName)) {
+                        showMessage(`The label name "${labelName}" already exists. Please choose a unique name.`);
+                        return;
+                    }
+
+                    // Remove the placeholder if it exists
+                    const placeholder = labelOverview.querySelector('p');
+                    if (placeholder) {
+                        labelOverview.innerHTML = '';
+                    }
+
+                    // Create the new label button element
+                    const newLabelBtn = document.createElement('button');
+                    newLabelBtn.textContent = labelName;
+                    newLabelBtn.setAttribute('data-label-name', labelName); // Store label name for lookup
+                    
+                    // Apply styles for a colorful, rounded button
+                    const color = getRandomColor();
+                    newLabelBtn.style.backgroundColor = color;
+                    newLabelBtn.setAttribute('data-color', color); // Store color for annotated spans
+                    newLabelBtn.classList.add(
+                        'px-4', 'py-2', 'rounded-full', 'text-white', 'font-medium', 
+                        'text-sm', 'transition-colors', 'shadow-md', 'hover:opacity-80', 
+                        'mr-2', 'mb-2'
+                    );
+
+                    // Add click handler to toggle focus or annotate text
+                    newLabelBtn.addEventListener('click', (event) => {
+                        const clickedLabelName = event.target.getAttribute('data-label-name');
+
+                        if (focusedSpan) {
+                            const labels = textToLabel[focusedSpan];
+                            const labelIndex = labels.indexOf(clickedLabelName);
+                            const labelButton = event.target;
+
+                            if (labelIndex > -1) {
+                                // Label exists, so remove it
+                                labels.splice(labelIndex, 1);
+                                
+                                // Remove span from the labelToText mapping
+                                const spanIndexInLabel = labelToText[clickedLabelName].indexOf(focusedSpan);
+                                if (spanIndexInLabel > -1) {
+                                    labelToText[clickedLabelName].splice(spanIndexInLabel, 1);
+                                }
+                                
+                                // Remove visual ring from the button
+                                labelButton.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+
+                                // If no more labels on the span, remove the span element itself
+                                if (labels.length === 0) {
+                                     const focusedSpanElement = document.getElementById(focusedSpan);
+                                     if (focusedSpanElement) {
+                                         const parent = focusedSpanElement.parentNode;
+                                         parent.replaceChild(document.createTextNode(focusedSpanElement.textContent), focusedSpanElement);
+                                         focusedSpan = null; // Clear focused span
+                                     }
+                                }
+
+                                console.log(`Removed label '${clickedLabelName}' from span '${focusedSpan}'.`);
+
+                            } else {
+                                // A span is focused, and this label is new to it, so add it
+                                labels.push(clickedLabelName);
+                                if (!labelToText[clickedLabelName]) {
+                                    labelToText[clickedLabelName] = [];
+                                }
+                                labelToText[clickedLabelName].push(focusedSpan);
+                                
+                                // Add visual ring to the button
+                                labelButton.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+
+                                console.log(`Added label '${clickedLabelName}' to span '${focusedSpan}'.`);
+                            }
+                            
+                            // Re-render the background
+                            const focusedSpanElement = document.getElementById(focusedSpan);
+                            if(focusedSpanElement) {
+                                updateSpanBackground(focusedSpanElement);
+                            }
+
+                        } else if (currentSelection) {
+                            // A text selection exists, so create a new span
+                            const newSpan = document.createElement('span');
+                            const spanId = 'span-' + Date.now();
+                            newSpan.id = spanId;
+                            newSpan.classList.add('annotated-text');
+                            newSpan.style.color = '#1f2937';
+                            
+                            currentSelection.surroundContents(newSpan);
+
+                            textToLabel[spanId] = [clickedLabelName];
+                            if (!labelToText[clickedLabelName]) {
+                                labelToText[clickedLabelName] = [];
+                            }
+                            labelToText[clickedLabelName].push(spanId);
+                            
+                            updateSpanBackground(newSpan);
+                            
+                            window.getSelection().removeAllRanges();
+                            currentSelection = null;
+                            
+                            // Automatically set the new span as the focused one
+                            focusedSpan = spanId;
+                            annotationZone.querySelectorAll('.annotated-text').forEach(s => s.classList.remove('focused-span'));
+                            newSpan.classList.add('focused-span');
+                        } else {
+                            // No text selected and no span focused, so just toggle the label focus
+                            const index = focusedLabels.indexOf(clickedLabelName);
+                            if (index > -1) {
+                                // Label is in focus, remove it
+                                focusedLabels.splice(index, 1);
+                                event.target.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                            } else {
+                                // Label is not in focus, add it
+                                focusedLabels.push(clickedLabelName);
+                                event.target.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                            }
+                        }
+                    });
+
+                    // Append the new label button to the overview panel
+                    labelOverview.appendChild(newLabelBtn);
+                }
+            });
+
+            // Handle edit label button click
+            editLabelBtn.addEventListener('click', () => {
+                if (focusedLabels.length === 1) {
+                    const labelName = focusedLabels[0];
+                    const labelButton = labelOverview.querySelector(`button[data-label-name="${labelName}"]`);
+                    const color = labelButton.getAttribute('data-color');
+                    const r = parseInt(color.substring(1, 3), 16);
+                    const g = parseInt(color.substring(3, 5), 16);
+                    const b = parseInt(color.substring(5, 7), 16);
+
+                    // Pre-fill modal inputs
+                    editNameInput.value = labelName;
+                    editColorR.value = r;
+                    editColorG.value = g;
+                    editColorB.value = b;
+
+                    editModal.style.display = 'flex';
+
+                } else if (focusedLabels.length > 1) {
+                    showMessage("Cannot edit multiple labels at once.");
+                } else {
+                    showMessage("Please select a single label to edit.");
+                }
+            });
+
+            // Handle save edit button click in modal
+            saveEditBtn.addEventListener('click', () => {
+                const oldName = focusedLabels[0];
+                const newName = editNameInput.value;
+                const newR = editColorR.value;
+                const newG = editColorG.value;
+                const newB = editColorB.value;
+
+                if (!newName.trim()) {
+                    showMessage("Label name cannot be empty.");
+                    return;
+                }
+                
+                // Check for unique label name, but ignore the current name
+                const existingLabels = Array.from(labelOverview.querySelectorAll('button'))
+                                            .filter(btn => btn.getAttribute('data-label-name') !== oldName)
+                                            .map(btn => btn.getAttribute('data-label-name'));
+                if (existingLabels.includes(newName)) {
+                    showMessage(`The label name "${newName}" already exists. Please choose a unique name.`);
+                    return;
+                }
+
+                // Convert RGB to hex
+                const newColor = `#${(1 << 24 | newR << 16 | newG << 8 | newB).toString(16).slice(1)}`;
+
+                const labelButton = labelOverview.querySelector(`button[data-label-name="${oldName}"]`);
+
+                if (labelButton) {
+                    // Update button visuals and attributes
+                    labelButton.textContent = newName;
+                    labelButton.setAttribute('data-label-name', newName);
+                    labelButton.style.backgroundColor = newColor;
+                    labelButton.setAttribute('data-color', newColor);
+                }
+
+                // Update data structures
+                if (oldName !== newName) {
+                    // Update textToLabel
+                    if (labelToText[oldName]) {
+                        labelToText[oldName].forEach(spanId => {
+                            const labels = textToLabel[spanId];
+                            const index = labels.indexOf(oldName);
+                            if (index > -1) {
+                                labels[index] = newName;
+                            }
+                        });
+                        // Update labelToText
+                        labelToText[newName] = labelToText[oldName];
+                        delete labelToText[oldName];
+                    }
+                }
+                
+                // Update focusedLabels state
+                focusedLabels = [newName];
+                
+                // Re-render all affected spans
+                const spansToUpdate = labelToText[newName] || [];
+                spansToUpdate.forEach(spanId => {
+                    const spanElement = document.getElementById(spanId);
+                    if (spanElement) {
+                        updateSpanBackground(spanElement);
+                    }
+                });
+
+                editModal.style.display = 'none';
+            });
+
+            // Handle cancel edit button click in modal
+            cancelEditBtn.addEventListener('click', () => {
+                editModal.style.display = 'none';
+            });
+            
+            // Handle delete label button click
+            deleteLabelBtn.addEventListener('click', () => {
+                if (focusedLabels.length === 0) {
+                    showMessage("Please select one or more labels to delete.");
+                    return;
+                }
+
+                focusedLabels.forEach(labelName => {
+                    // Remove spans associated with the label
+                    const spanIds = labelToText[labelName] || [];
+                    spanIds.forEach(spanId => {
+                        const labels = textToLabel[spanId];
+                        const index = labels.indexOf(labelName);
+                        if (index > -1) {
+                            labels.splice(index, 1);
+                        }
+                        const spanElement = document.getElementById(spanId);
+                        if (labels.length === 0 && spanElement) {
+                            // Remove span from DOM if it has no labels left
+                            spanElement.parentNode.replaceChild(document.createTextNode(spanElement.textContent), spanElement);
+                        } else if (spanElement) {
+                            updateSpanBackground(spanElement);
+                        }
+                    });
+
+                    // Remove the label from data structures
+                    delete labelToText[labelName];
+                    delete textToLabel; // Reset all text annotations for now, this will be fixed in the next iteration.
+
+                    // Remove the label button from the DOM
+                    const labelButton = labelOverview.querySelector(`button[data-label-name="${labelName}"]`);
+                    if (labelButton) {
+                        labelButton.remove();
+                    }
+                });
+                
+                // Clear the focused labels state and their visual highlights
+                focusedLabels = [];
+                labelOverview.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+                });
+                showMessage("Labels deleted successfully.");
+            });
+        });
+    </script>
+
+</body>
+</html>
