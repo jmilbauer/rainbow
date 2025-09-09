@@ -1,5 +1,5 @@
 # 🌈 rainbow
-Rainbow is a lightweight annotation tool for text spans, great for small workloads and development.
+Rainbow is a lightweight annotation tool for text spans.
 Made with Google Gemini.
 
 ![](https://github.com/jmilbauer/rainbow/blob/main/example.gif)
@@ -13,7 +13,7 @@ Made with Google Gemini.
 ## Installation and Usage
 
 No installation needed. Just open the HTML file and start annotating.
-You will have to manage data yourself, so this is best for small annotation workloads, design iteration, or as a foundation for more complex tools.
+You will have to manage data yourself, so this is best for small workloads, task prototyping, or as a foundation for custom-built tools.
 
 ## Goals
 
