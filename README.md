@@ -20,3 +20,4 @@ You will have to manage data yourself, so this is best for small annotation work
 - Backend for data management
 - Backend for AI tools.
 - Better UI
+- Standardization of output format.
