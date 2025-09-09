@@ -1,4 +1,4 @@
-# rainbow
+# 🌈 rainbow
 A lightweight annotation tool for labeling text spans.
 Made with Google Gemini.
 
