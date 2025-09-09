@@ -500,11 +500,6 @@
                             focusedSpan = spanId;
                             annotationZone.querySelectorAll('.annotated-text').forEach(s => s.classList.remove('focused-span'));
                             newSpan.classList.add('focused-span');
-                            
-                            // Highlight the label button that was just used
-                            focusedLabels.push(clickedLabelName);
-                            event.target.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
-
                         } else {
                             // No text selected and no span focused, so just toggle the label focus
                             const index = focusedLabels.indexOf(clickedLabelName);
