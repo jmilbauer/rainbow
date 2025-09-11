@@ -721,6 +721,7 @@
                             labels.splice(index, 1);
                         }
                         handleSpanCleanup(spanId);
+                        updateSpanBackground(document.getElementById(spanId));
                     });
 
                     // Remove the label from data structures
