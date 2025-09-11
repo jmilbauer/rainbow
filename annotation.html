@@ -46,6 +46,9 @@
             justify-content: center;
             align-items: center;
         }
+        .hover-highlight:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -65,7 +68,7 @@
                     <button id="reset-button" class="bg-gray-400 hover:bg-gray-500 text-white font-medium py-3 rounded-xl transition-colors shadow-md flex-shrink-0 whitespace-nowrap px-4">
                         Reset
                     </button>
-                    <button id="export-button" class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-colors shadow-md flex-shrink-0 whitespace-nowrap px-4">
+                    <button id="export-button" class="bg-blue-400 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-colors shadow-md flex-shrink-0 whitespace-now-rap px-4">
                         Export</button>
                 </div>
             </div>
@@ -99,6 +102,12 @@
                     <span>🗑️</span>
                     <span>Delete</span>
                 </button>
+            </div>
+            
+            <!-- Backend Panel -->
+            <div class="flex flex-col mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h2 class="text-xl font-bold mb-2 text-gray-800">Backend Hostname</h2>
+                <input type="text" id="backend-hostname" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. localhost:8080 or my-server.com">
             </div>
         </div>
     </div>
@@ -149,6 +158,7 @@
             const saveEditBtn = document.getElementById('save-edit-btn');
             const cancelEditBtn = document.getElementById('cancel-edit-btn');
             const messagePopup = document.getElementById('message-popup');
+            const backendHostnameInput = document.getElementById('backend-hostname');
             
             // Data storage and state variables
             let focusedLabels = []; // Stores names of focused labels
@@ -192,7 +202,7 @@
             };
 
             // Function to load the text into the annotation zone
-            const loadText = () => {
+            const loadText = async () => {
                 let text = textInput.value;
                 if (text.trim() === '') {
                     text = sampleText;
@@ -201,88 +211,51 @@
                 // Reset annotations before loading new text
                 resetAnnotations();
                 
-                // Clear the existing content and append the new text
-                annotationZone.innerHTML = `<p class="text-gray-800 leading-relaxed">${text}</p>`;
-            };
+                const backendHostname = backendHostnameInput.value.trim();
 
-            // New color generation algorithm
-            const getDistinctColor = () => {
-                const existingButtons = Array.from(labelOverview.querySelectorAll('button'));
-                const existingColors = existingButtons.map(btn => btn.getAttribute('data-color'));
-                const labelCount = existingButtons.length;
-
-                const predefinedColors = [
-                    '#EF4444', // A nice red (Tailwind red-500)
-                    '#F59E0B', // A nice yellow (Tailwind amber-500)
-                    '#3B82F6', // A nice blue (Tailwind blue-500)
-                ];
-
-                if (labelCount < predefinedColors.length) {
-                    const colorToUse = predefinedColors[labelCount];
-                    // Use the predefined color if it's not already taken
-                    if (!existingColors.includes(colorToUse)) {
-                        return colorToUse;
-                    }
-                }
-
-                // Helper function to calculate color distance in RGB space
-                const colorDistance = (color1, color2) => {
-                    const c1 = hexToRgb(color1);
-                    const c2 = hexToRgb(color2);
-                    if (!c1 || !c2) return Infinity;
-                    const r = c1.r - c2.r;
-                    const g = c1.g - c2.g;
-                    const b = c1.b - c2.b;
-                    return Math.sqrt(r * r + g * g + b * b);
-                };
-
-                const hexToRgb = (hex) => {
-                    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-                    return result ? {
-                        r: parseInt(result[1], 16),
-                        g: parseInt(result[2], 16),
-                        b: parseInt(result[3], 16)
-                    } : null;
-                };
-
-                // Function to check if a color is bold and not pastel-like
-                const isBoldColor = (r, g, b) => {
-                    const min = Math.min(r, g, b);
-                    const max = Math.max(r, g, b);
-                    // Ensure a significant difference between the brightest and darkest component
-                    return (max - min) > 100; 
-                };
-
-                let newColor = '';
-                let isDistinct = false;
-                let attempts = 0;
-
-                while (!isDistinct && attempts < 100) {
-                    attempts++;
-                    // Generate a new random color in RGB
-                    const r = Math.floor(Math.random() * 256);
-                    const g = Math.floor(Math.random() * 256);
-                    const b = Math.floor(Math.random() * 256);
-                    
-                    if (!isBoldColor(r, g, b)) {
-                        continue; // Skip if not bold
-                    }
-
-                    // Convert RGB to hex
-                    newColor = `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).padStart(6, '0')}`;
-                    isDistinct = true;
-                    for (const existingColor of existingColors) {
-                        if (colorDistance(newColor, existingColor) < 150) { // Threshold for "sameness"
-                            isDistinct = false;
-                            break;
+                if (backendHostname) {
+                    try {
+                        const url = `http://${backendHostname}/segment?text=${encodeURIComponent(text)}`;
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
+                        const segments = await response.json();
+                        
+                        annotationZone.innerHTML = ''; // Clear annotation zone
+
+                        segments.forEach((segment, index) => {
+                            const newSpan = document.createElement('span');
+                            const spanId = `span-${Date.now()}-${index}`;
+                            newSpan.id = spanId;
+                            newSpan.classList.add('annotated-text', 'hover-highlight');
+                            newSpan.setAttribute('data-span-type', 'auto');
+                            newSpan.style.color = '#1f2937';
+                            newSpan.textContent = segment;
+                            
+                            // Initialize data structures
+                            textToLabel[spanId] = [];
+                            
+                            annotationZone.appendChild(newSpan);
+                            annotationZone.appendChild(document.createTextNode(' ')); // Add a space for readability
+                        });
+
+                        showMessage("Text segmented and loaded from backend!");
+
+                    } catch (error) {
+                        console.error('Error fetching data from backend:', error);
+                        showMessage("Failed to connect to backend. Loading text as a single block.");
+                        // Fallback to single block if backend fails
+                        annotationZone.innerHTML = `<p class="text-gray-800 leading-relaxed">${text}</p>`;
                     }
+
+                } else {
+                    // Load as a single block if no backend is specified
+                    annotationZone.innerHTML = `<p class="text-gray-800 leading-relaxed">${text}</p>`;
                 }
-                
-                return isDistinct ? newColor : '#60A5FA'; // Fallback color if loop fails
             };
 
-            // Function to update the background of a span with a gradient of its labels
+            // Function to update the background and hover class of a span
             const updateSpanBackground = (spanElement) => {
                 const labels = textToLabel[spanElement.id] || [];
                 const colors = labels.map(labelName => {
@@ -294,12 +267,36 @@
                     const gradient = `linear-gradient(to right, ${colors.map(c => c + '55').join(', ')})`;
                     spanElement.style.backgroundImage = gradient;
                     spanElement.style.backgroundColor = 'transparent'; // Reset solid color
+                    spanElement.classList.remove('hover-highlight');
                 } else if (colors.length === 1) {
                     spanElement.style.backgroundImage = 'none';
                     spanElement.style.backgroundColor = colors[0] + '55';
+                    spanElement.classList.remove('hover-highlight');
                 } else {
                     spanElement.style.backgroundImage = 'none';
-                    spanElement.style.backgroundColor = 'transparent';
+                    spanElement.style.backgroundColor = ''; // remove all colors.
+                    spanElement.classList.add('hover-highlight'); // Re-enable hover effect
+                }
+            };
+            
+            // Function to handle removal of spans when their last label is gone
+            const handleSpanCleanup = (spanId) => {
+                const labels = textToLabel[spanId];
+                if (labels && labels.length === 0) {
+                    const spanElement = document.getElementById(spanId);
+                    if (spanElement) {
+                        if (spanElement.getAttribute('data-span-type') === 'user') {
+                            // It's a user-created span with no labels, so remove it
+                            spanElement.parentNode.replaceChild(document.createTextNode(spanElement.textContent), spanElement);
+                            delete textToLabel[spanId];
+                            if (focusedSpan === spanId) {
+                                focusedSpan = null;
+                            }
+                        } else {
+                            // It's an autospan with no labels, just update the background
+                            updateSpanBackground(spanElement);
+                        }
+                    }
                 }
             };
 
@@ -403,6 +400,83 @@
                 }
             });
 
+            // New color generation algorithm
+            const getDistinctColor = () => {
+                const existingButtons = Array.from(labelOverview.querySelectorAll('button'));
+                const existingColors = existingButtons.map(btn => btn.getAttribute('data-color'));
+                const labelCount = existingButtons.length;
+
+                const predefinedColors = [
+                    '#EF4444', // A nice red (Tailwind red-500)
+                    '#F59E0B', // A nice yellow (Tailwind amber-500)
+                    '#3B82F6', // A nice blue (Tailwind blue-500)
+                ];
+
+                if (labelCount < predefinedColors.length) {
+                    const colorToUse = predefinedColors[labelCount];
+                    // Use the predefined color if it's not already taken
+                    if (!existingColors.includes(colorToUse)) {
+                        return colorToUse;
+                    }
+                }
+
+                // Helper function to calculate color distance in RGB space
+                const colorDistance = (color1, color2) => {
+                    const c1 = hexToRgb(color1);
+                    const c2 = hexToRgb(color2);
+                    if (!c1 || !c2) return Infinity;
+                    const r = c1.r - c2.r;
+                    const g = c1.g - c2.g;
+                    const b = c1.b - c2.b;
+                    return Math.sqrt(r * r + g * g + b * b);
+                };
+
+                const hexToRgb = (hex) => {
+                    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                    return result ? {
+                        r: parseInt(result[1], 16),
+                        g: parseInt(result[2], 16),
+                        b: parseInt(result[3], 16)
+                    } : null;
+                };
+
+                // Function to check if a color is bold and not pastel-like
+                const isBoldColor = (r, g, b) => {
+                    const min = Math.min(r, g, b);
+                    const max = Math.max(r, g, b);
+                    // Ensure a significant difference between the brightest and darkest component
+                    return (max - min) > 100; 
+                };
+
+                let newColor = '';
+                let isDistinct = false;
+                let attempts = 0;
+
+                while (!isDistinct && attempts < 100) {
+                    attempts++;
+                    // Generate a new random color in RGB
+                    const r = Math.floor(Math.random() * 256);
+                    const g = Math.floor(Math.random() * 256);
+                    const b = Math.floor(Math.random() * 256);
+                    
+                    if (!isBoldColor(r, g, b)) {
+                        continue; // Skip if not bold
+                    }
+
+                    // Convert RGB to hex
+                    newColor = `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).padStart(6, '0')}`;
+                    isDistinct = true;
+                    for (const existingColor of existingColors) {
+                        if (colorDistance(newColor, existingColor) < 150) { // Threshold for "sameness"
+                            isDistinct = false;
+                            break;
+                        }
+                    }
+                }
+                
+                return isDistinct ? newColor : '#60A5FA'; // Fallback color if loop fails
+            };
+
             // Make the 'New Label' button functional
             newLabelBtn.addEventListener('click', () => {
                 const labelName = prompt("Enter a name for the new label:");
@@ -458,17 +532,7 @@
                                 
                                 // Remove visual ring from the button
                                 labelButton.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
-
-                                // If no more labels on the span, remove the span element itself
-                                if (labels.length === 0) {
-                                     const focusedSpanElement = document.getElementById(focusedSpan);
-                                     if (focusedSpanElement) {
-                                         const parent = focusedSpanElement.parentNode;
-                                         parent.replaceChild(document.createTextNode(focusedSpanElement.textContent), focusedSpanElement);
-                                         focusedSpan = null; // Clear focused span
-                                     }
-                                }
-
+                                
                                 console.log(`Removed label '${clickedLabelName}' from span '${focusedSpan}'.`);
 
                             } else {
@@ -485,10 +549,11 @@
                                 console.log(`Added label '${clickedLabelName}' to span '${focusedSpan}'.`);
                             }
                             
-                            // Re-render the background
+                            // Re-render the background and check for span cleanup
                             const focusedSpanElement = document.getElementById(focusedSpan);
                             if(focusedSpanElement) {
                                 updateSpanBackground(focusedSpanElement);
+                                handleSpanCleanup(focusedSpan);
                             }
 
                         } else if (currentSelection) {
@@ -497,6 +562,7 @@
                             const spanId = 'span-' + Date.now();
                             newSpan.id = spanId;
                             newSpan.classList.add('annotated-text');
+                            newSpan.setAttribute('data-span-type', 'user');
                             newSpan.style.color = '#1f2937';
                             
                             currentSelection.surroundContents(newSpan);
@@ -654,14 +720,7 @@
                         if (index > -1) {
                             labels.splice(index, 1);
                         }
-                        const spanElement = document.getElementById(spanId);
-                        if (labels.length === 0 && spanElement) {
-                            // Remove span from DOM if it has no labels left
-                            spanElement.parentNode.replaceChild(document.createTextNode(spanElement.textContent), spanElement);
-                            delete textToLabel[spanId]; // Remove from textToLabel data structure
-                        } else if (spanElement) {
-                            updateSpanBackground(spanElement);
-                        }
+                        handleSpanCleanup(spanId);
                     });
 
                     // Remove the label from data structures
@@ -686,4 +745,3 @@
 
 </body>
 </html>
-
