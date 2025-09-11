@@ -713,6 +713,7 @@
 
                 focusedLabels.forEach(labelName => {
                     // Remove spans associated with the label
+                    console.log("Deleting", labelName);
                     const spanIds = labelToText[labelName] || [];
                     spanIds.forEach(spanId => {
                         const labels = textToLabel[spanId];
@@ -720,8 +721,8 @@
                         if (index > -1) {
                             labels.splice(index, 1);
                         }
-                        handleSpanCleanup(spanId);
                         updateSpanBackground(document.getElementById(spanId));
+                        handleSpanCleanup(spanId);
                     });
 
                     // Remove the label from data structures
